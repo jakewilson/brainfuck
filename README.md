@@ -1,1 +1,1 @@
-[brainfuck](https://en.wikipedia.org/wiki/Brainfuck) interpreter
+[brainfuck](https://en.wikipedia.org/wiki/Brainfuck#Hello_World!) interpreter

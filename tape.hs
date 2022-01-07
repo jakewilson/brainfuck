@@ -1,5 +1,12 @@
 module Tape where
 
+-- a Tape used for getting constant time access to a movable head
+-- example:
+-- t = 0 1 2 3 4 5 6
+--     ^
+-- right t
+-- t = 0 1 2 3 4 5 6
+--       ^
 data Tape a = Tape [a] [a]
 
 instance Show a => Show (Tape a) where

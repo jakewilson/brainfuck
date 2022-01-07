@@ -6,7 +6,7 @@ import Debug.Trace
 type Program = Tape Char
 type Memory  = Tape Int
 
-data BFAction =
+data Action =
     Output Char
   | Input (Char -> Memory -> Memory)
   | Continue
@@ -18,6 +18,9 @@ goto :: LoopType -> Program -> Program
 goto = goto' 0
   where
     goto' :: Int -> LoopType -> Program -> Program
+    -- goto' takes a loop counter arg for proper handling
+    -- of nested loops so [[]] will correctly go to the second
+    -- end bracket instead of stopping immediately at the first
     goto' lc Start prog
       | cursor prog == '[' && lc == 0 = prog
       | cursor prog == '['            = goto' (lc - 1) Start $ left prog
@@ -36,7 +39,7 @@ loopStart prog mem = if skip then goto End (right prog) else prog
 loopEnd :: Program -> Program
 loopEnd prog = goto Start (left prog)
 
-run :: Program -> Memory -> (BFAction, Program, Memory)
+run :: Program -> Memory -> (Action, Program, Memory)
 run prog mem | end prog = (Stop, prog, mem)
 run prog mem =
   case cursor prog of
