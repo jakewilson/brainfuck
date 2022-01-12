@@ -1,36 +1,45 @@
 import Tape
 
 import Data.Char
-import Debug.Trace
 
 type Program = Tape Char
 type Memory  = Tape Int
 
-data Action =
-    Output Char
-  | Input (Char -> Memory -> Memory)
-  | Continue
+data State = State
+  { program :: Program
+  , memory  :: Memory
+  }
+  deriving Show
+
+data Result =
+    Output Char State
+  | Input (Char -> State)
+  | Continue State
   | Stop
 
 data LoopType = Start | End
 
 goto :: LoopType -> Program -> Program
-goto = goto' 0
+goto Start = start 0
   where
-    goto' :: Int -> LoopType -> Program -> Program
+    start :: Int -> Program -> Program
+    start lc prog
+      | cursor prog == '[' && lc == 0 = prog
+      | cursor prog == '['            = start (lc - 1) $ left prog
+      | cursor prog == ']'            = start (lc + 1) $ left prog
+      | otherwise                     = start lc $ left prog
+
+goto End = end 0
+  where
+    end :: Int -> Program -> Program
     -- goto' takes a loop counter arg for proper handling
     -- of nested loops so [[]] will correctly go to the second
     -- end bracket instead of stopping immediately at the first
-    goto' lc Start prog
-      | cursor prog == '[' && lc == 0 = prog
-      | cursor prog == '['            = goto' (lc - 1) Start $ left prog
-      | cursor prog == ']'            = goto' (lc + 1) Start $ left prog
-      | otherwise                     = goto' lc Start $ left prog
-    goto' lc End prog
+    end lc prog
       | cursor prog == ']' && lc == 0 = prog
-      | cursor prog == ']'            = goto' (lc - 1) End $ right prog
-      | cursor prog == '['            = goto' (lc + 1) End $ right prog
-      | otherwise                     = goto' lc End $ right prog
+      | cursor prog == ']'            = end (lc - 1) $ right prog
+      | cursor prog == '['            = end (lc + 1) $ right prog
+      | otherwise                     = end lc $ right prog
 
 loopStart :: Program -> Memory -> Program
 loopStart prog mem = if skip then goto End (right prog) else prog
@@ -39,46 +48,33 @@ loopStart prog mem = if skip then goto End (right prog) else prog
 loopEnd :: Program -> Program
 loopEnd prog = goto Start (left prog)
 
-run :: Program -> Memory -> (Action, Program, Memory)
-run prog mem | end prog = (Stop, prog, mem)
-run prog mem =
+run :: State -> Result
+run (State prog _) | end prog = Stop
+run (State prog mem) =
   case cursor prog of
-    '+' -> (Continue, right prog, update (+ 1) mem)
-    '-' -> (Continue, right prog, update (subtract 1) mem)
-    '>' -> (Continue, right prog, right mem)
-    '<' -> (Continue, right prog, left mem)
-    '[' -> (Continue, right $ loopStart prog mem, mem)
-    ']' -> (Continue, loopEnd prog, mem)
-    '.' -> (Output $ chr (cursor mem), right prog, mem)
-    ',' -> (Input (modify . ord), right prog, mem)
-    _   -> error "wat"
+    '+' -> Continue $ State (right prog) (update (+ 1) mem)
+    '-' -> Continue $ State (right prog) (update (subtract 1) mem)
+    '>' -> Continue $ State (right prog) (right mem)
+    '<' -> Continue $ State (right prog) (left mem)
+    '[' -> Continue $ State (right $ loopStart prog mem) mem
+    ']' -> Continue $ State (loopEnd prog) mem
+    '.' -> Output (chr $ cursor mem) $ State (right prog) mem
+    ',' -> Input (\c -> State (right prog) (modify (ord c) mem))
+    _   -> Continue $ State (right prog) mem -- any other char is a comment
 
 size :: Int
 size = 100
-
-removeComments :: String -> String
-removeComments = filter (`elem` "<>+-[],.")
-
-progTape :: String -> Program
-progTape = tape . removeComments
 
 main :: IO ()
 main = do
   input <- readFile "hello_world.bf"
   let memory = tape $ replicate size 0
-  let prog   = progTape input
-  mainLoop prog memory
+  let prog   = tape input
+  mainLoop $ State prog memory
 
-mainLoop :: Program -> Memory -> IO ()
-mainLoop prog mem = do
-  let (action, prog', mem') = run prog mem
-  case action of
-    Continue      -> mainLoop prog' mem'
-    Stop          -> return ()
-    (Input f)  -> do
-      c <- getChar
-      let mem'' = f c mem'
-      mainLoop prog' mem''
-    (Output c) -> do
-      putChar c
-      mainLoop prog' mem'
+mainLoop :: State -> IO ()
+mainLoop state = case run state of
+  Continue state' -> mainLoop state'
+  Input put       -> getChar >>= mainLoop . put
+  Output c state' -> putChar c >> mainLoop state'
+  Stop            -> return ()

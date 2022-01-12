@@ -1,4 +1,13 @@
-module Tape where
+module Tape
+  ( Tape
+  , tape
+  , right
+  , left
+  , end
+  , cursor
+  , modify
+  , update
+  ) where
 
 -- a Tape used for getting constant time access to a movable head
 -- example:
