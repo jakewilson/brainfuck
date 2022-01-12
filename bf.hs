@@ -50,17 +50,16 @@ loopEnd prog = goto Start (left prog)
 
 run :: State -> Result
 run (State prog _) | end prog = Stop
-run (State prog mem) =
-  case cursor prog of
-    '+' -> Continue $ State (right prog) (update (+ 1) mem)
-    '-' -> Continue $ State (right prog) (update (subtract 1) mem)
-    '>' -> Continue $ State (right prog) (right mem)
-    '<' -> Continue $ State (right prog) (left mem)
-    '[' -> Continue $ State (right $ loopStart prog mem) mem
-    ']' -> Continue $ State (loopEnd prog) mem
-    '.' -> Output (chr $ cursor mem) $ State (right prog) mem
-    ',' -> Input (\c -> State (right prog) (modify (ord c) mem))
-    _   -> Continue $ State (right prog) mem -- any other char is a comment
+run (State prog mem) = case cursor prog of
+  '+' -> Continue $ State (right prog) (update (+ 1) mem)
+  '-' -> Continue $ State (right prog) (update (subtract 1) mem)
+  '>' -> Continue $ State (right prog) (right mem)
+  '<' -> Continue $ State (right prog) (left mem)
+  '[' -> Continue $ State (right $ loopStart prog mem) mem
+  ']' -> Continue $ State (loopEnd prog) mem
+  '.' -> Output (chr $ cursor mem) $ State (right prog) mem
+  ',' -> Input (\c -> State (right prog) (modify (ord c) mem))
+  _   -> Continue $ State (right prog) mem -- any other char is a comment
 
 size :: Int
 size = 100
