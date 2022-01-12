@@ -22,6 +22,7 @@ data LoopType = Start | End
 goto :: LoopType -> Program -> Program
 goto Start = start 0
   where
+    -- go backwards until finding the matching [
     start :: Int -> Program -> Program
     start lc prog
       | cursor prog == '[' && lc == 0 = prog
@@ -31,10 +32,8 @@ goto Start = start 0
 
 goto End = end 0
   where
+    -- go forwards until finding the matching ]
     end :: Int -> Program -> Program
-    -- goto' takes a loop counter arg for proper handling
-    -- of nested loops so [[]] will correctly go to the second
-    -- end bracket instead of stopping immediately at the first
     end lc prog
       | cursor prog == ']' && lc == 0 = prog
       | cursor prog == ']'            = end (lc - 1) $ right prog
